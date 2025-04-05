@@ -50,7 +50,7 @@ namespace EventEase.Migrations
                     BookingId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     EventId = table.Column<int>(type: "int", nullable: false),
-                    VenueId = table.Column<int>(type: "int", nullable: false),
+                    VenueId = table.Column<int>(type: "int", nullable: true),
                     BookingDate = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
