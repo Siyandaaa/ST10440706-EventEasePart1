@@ -1,4 +1,4 @@
-﻿@model IEnumerable<EventEase.Models.Booking>
+﻿@model EventEase.Models.BookingViewModel
 
 @{
     ViewData["Title"] = "Booking";
@@ -8,23 +8,34 @@
 <p>
     <a asp-action="Create">Create New</a>
 </p>
+
+<form asp-controller="Bookings" asp-action="Index" method="get">
+    <p>
+        <select asp-for="BookingDates" asp-items="Model.Dates">
+            <option value="">All</option>
+        </select>
+        <label>Name <input type="text" asp-for="searchString" /></label>
+        <input type="submit" value="Search" />
+    </p>
+</form>
+
 <table class="table">
     <thead>
         <tr>
             <th>
-                @Html.DisplayNameFor(model => model.BookingDate)
+                @Html.DisplayNameFor(model => model.Bookings![0].BookingDate)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Event)
+                @Html.DisplayNameFor(model => model.Bookings![0].Event)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Venue)
+                @Html.DisplayNameFor(model => model.Bookings![0].Venue)
             </th>
             <th></th>
         </tr>
     </thead>
     <tbody>
-@foreach (var item in Model) {
+@foreach (var item in Model.Bookings!) {
         <tr>
             <td>
                 @Html.DisplayFor(modelItem => item.BookingDate)

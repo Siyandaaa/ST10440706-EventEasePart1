@@ -20,10 +20,42 @@ namespace EventEase.Controllers
         }
 
         // GET: Bookings
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string BookingDates, string searchString)
         {
-            var eventEaseContext = _context.Booking.Include(b => b.Event).Include(b => b.Venue);
-            return View(await eventEaseContext.ToListAsync());
+            if (_context.Booking == null)
+            {
+                return Problem("Entity set 'EventEasePracticeContext.Booking' is null.");
+            }
+
+            IQueryable<DateTime> datesQuery = from n in _context.Booking
+                                              orderby n.BookingDate
+                                              select n.BookingDate;
+
+            var bookings = from v in _context.Booking.Include(b => b.Event).Include(b => b.Venue)
+                           select v;
+
+            // Filter by search string for EventName or BookingId
+            if (!String.IsNullOrEmpty(searchString))
+            {
+                bookings = bookings.Where(g => g.Event.EventName.ToUpper().Contains(searchString.ToUpper()) ||
+                                               g.BookingId.ToString() == searchString);
+            }
+
+            // Filter by selected booking date
+            if (!string.IsNullOrEmpty(BookingDates))
+            {
+                if (DateTime.TryParse(BookingDates, out var parsedDate))
+                {
+                    bookings = bookings.Where(z => z.BookingDate == parsedDate);
+                }
+            }
+
+            var BookingVM = new BookingViewModel
+            {
+                Dates = new SelectList(await datesQuery.Distinct().ToListAsync()),
+                Bookings = await bookings.ToListAsync()
+            };
+            return View(BookingVM);
         }
 
         // GET: Bookings/Details/5
@@ -61,14 +93,35 @@ namespace EventEase.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("BookingId,EventId,VenueId,BookingDate")] Booking booking)
         {
+            // Fetch the event from the database based on booking.EventId
+            var @event = await _context.Event.FindAsync(booking.EventId);
+            if (@event == null)
+            {
+                ModelState.AddModelError("EventId", "The selected event does not exist.");
+                // Populate dropdown lists and return view early
+                ViewData["EventId"] = new SelectList(_context.Set<Event>(), "EventId", "EventId", booking.EventId);
+                ViewData["VenueId"] = new SelectList(_context.Set<Venue>(), "VenueId", "VenueId", booking.VenueId);
+                return View(booking);
+            }
             if (ModelState.IsValid)
             {
-                _context.Add(booking);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                // Check for existing booking: include Event to access EventDate
+                var existingBooking = await _context.Booking.Include(b => b.Event)
+                    .AnyAsync(b => b.VenueId == booking.VenueId &&
+                                   b.Event.EventDate.Date == @event.EventDate.Date);
+                if (existingBooking)
+                {
+                    ModelState.AddModelError("BookingDate", "This venue is already booked for the selected date and time.");
+                }
+                else
+                {
+                    _context.Add(booking);
+                    await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(Index));
+                }
             }
-            ViewData["EventId"] = new SelectList(_context.Event, "EventId", "EventId", booking.EventId);
-            ViewData["VenueId"] = new SelectList(_context.Venue, "VenueId", "VenueId", booking.VenueId);
+            ViewData["EventId"] = new SelectList(_context.Set<Event>(), "EventId", "EventId", booking.EventId);
+            ViewData["VenueId"] = new SelectList(_context.Set<Venue>(), "VenueId", "VenueId", booking.VenueId);
             return View(booking);
         }
 

@@ -17,6 +17,7 @@ namespace EventEase.Models
         public int VenueId { get; set; }
 
         [DataType(DataType.DateTime)]
+        [Display(Name = "Booking Date")]
         public DateTime BookingDate { get; set; }
 
         // Navigation properties
